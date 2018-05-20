@@ -28,7 +28,6 @@ use std::fmt::Display;
 use std::path::PathBuf;
 use std::str::FromStr;
 
-
 /// A trait for convenient, opinionated prompting
 pub trait Promptable: Sized {
     /// Prompts for a value. Re-prompts on invalid and empty input.
@@ -186,7 +185,9 @@ impl<P: Promptable> Promptable for Option<P> {
         P::prompt_opt(msg)
     }
     fn prompt_opt<S: AsRef<str>>(_msg: S) -> Option<Self> {
-        unimplemented!("prompt_opt is not implemented for Option types as it would return Option<Option<T>>");
+        unimplemented!(
+            "prompt_opt is not implemented for Option types as it would return Option<Option<T>>"
+        );
     }
     fn prompt_default<S: AsRef<str>>(msg: S, default: Self) -> Self {
         P::prompt_opt(msg).or(default)
@@ -200,7 +201,9 @@ pub struct Prompter<C: Completer> {
 
 impl Prompter<()> {
     pub fn new() -> Prompter<()> {
-        Prompter { editor: Editor::new() }
+        Prompter {
+            editor: Editor::new(),
+        }
     }
 }
 
@@ -329,4 +332,3 @@ fn path_expand(s: String) -> String {
     }
     s
 }
-
