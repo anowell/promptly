@@ -40,59 +40,138 @@ pub trait Promptable: Sized {
     /// Prompts for a value with a default value for empty input. Re-prompts on invalid input.
     ///
     /// The default value will be mentioned in the prompt message
-    fn prompt_default<S: AsRef<str>>(_msg: S, _default: Self) -> Self;
+    fn prompt_default<S: AsRef<str>>(msg: S, default: Self) -> Self;
 }
 
 impl Promptable for String {
+    /// Prompt until you get a non-empty string
+    ///
+    /// ```no_run
+    /// use promptly::Promptable;
+    /// String::prompt("Enter your name");
+    /// ```
     fn prompt<S: AsRef<str>>(msg: S) -> Self {
         Prompter::new().prompt_nonempty(msg)
     }
+
+    /// Prompt for an optional string
+    ///
+    /// ```no_run
+    /// use promptly::Promptable;
+    /// String::prompt_opt("Enter your phone number (optional)");
+    /// ```
     fn prompt_opt<S: AsRef<str>>(msg: S) -> Option<Self> {
         Prompter::new().prompt_opt(msg)
     }
+
+    /// Prompt for a string with a provided fallback value if empty.
+    ///
+    /// ```no_run
+    /// use promptly::Promptable;
+    /// String::prompt_default("Enter your country", "USA".into());
+    /// ```
+    ///
+    /// Default value is visible in the prompt as: `(default=USA)`
     fn prompt_default<S: AsRef<str>>(msg: S, default: Self) -> Self {
         let msg = format!("{} (default={})", msg.as_ref(), default);
         Prompter::new().prompt_opt(msg).unwrap_or(default)
     }
 }
 
+/// PathBuf prompting will use a path autocompleter
 impl Promptable for PathBuf {
+    /// Prompt until you get a non-empty path
     fn prompt<S: AsRef<str>>(msg: S) -> Self {
         prompt_path(msg)
     }
+    /// Prompt for an optional path
     fn prompt_opt<S: AsRef<str>>(msg: S) -> Option<Self> {
         prompt_path_opt(msg)
     }
+    /// Prompt for a path with a provided fallback value if empty
     fn prompt_default<S: AsRef<str>>(msg: S, default: Self) -> Self {
         let msg = format!("{} (default={})", msg.as_ref(), default.display());
         prompt_path_opt(msg).unwrap_or(default)
     }
 }
 
+/// Blanket impl for `FromStr` types. Re-prompts until `FromStr` parsing succeeds.
 impl<T> Promptable for T
 where
     T: FromStr + Display,
     <T as FromStr>::Err: ::std::error::Error,
 {
+    /// Prompt until the input parses into the specified type
+    ///
+    /// ```no_run
+    /// use promptly::Promptable;
+    /// u32::prompt("Enter your age");
+    /// ```
     default fn prompt<S: AsRef<str>>(msg: S) -> Self {
         prompt_parse(msg)
     }
+
+    /// Prompt for an optional, parseable value.
+    ///
+    /// Returns `None` if empty, otherwise prompts until input parses into specified type.
+    ///
+    /// ```no_run
+    /// # use std::net::IpAddr;
+    /// use promptly::Promptable;
+    /// IpAddr::prompt_opt("Enter your IP Address (optional)");
+    /// ```
     default fn prompt_opt<S: AsRef<str>>(msg: S) -> Option<Self> {
         prompt_parse_opt(msg)
     }
+
+    /// Prompt for a parseable value with a provided fallback value if empty.
+    ///
+    /// ```no_run
+    /// use promptly::Promptable;
+    /// u32::prompt_default("Enter the year", 2018);
+    /// ```
+    ///
+    /// Default value is visible in the prompt as: `(default=USA)`
     default fn prompt_default<S: AsRef<str>>(msg: S, default: Self) -> Self {
         let msg = format!("{} (default={})", msg.as_ref(), default);
         prompt_parse_opt(msg).unwrap_or(default)
     }
 }
 
+/// Specialized `bool` prompter that supports yes/no (y/n) values
 impl Promptable for bool {
+    /// Prompt for `bool` represented as `true/false`, `yes/no`, or `y/n` input
+    ///
+    /// The prompt will display the options: `(y/n)`
+    ///
+    /// ```no_run
+    /// use promptly::Promptable;
+    /// bool::prompt("Do you accept the terms?");
+    /// ```
     fn prompt<S: AsRef<str>>(msg: S) -> Self {
         prompt_bool(msg)
     }
+
+    /// Prompt for optional `bool` input. Empty input returns `None`.
+    ///
+    /// The prompt will display the options: `(y/n)`
+    ///
+    /// ```no_run
+    /// use promptly::Promptable;
+    /// bool::prompt_opt("Did you even read this question?");
+    /// ```
     fn prompt_opt<S: AsRef<str>>(msg: S) -> Option<Self> {
         prompt_bool_opt(msg)
     }
+
+    /// Prompt for optional `bool` input. Empty input returns `None`.
+    ///
+    /// The prompt will also display the options: `(Y/n)` or `(y/N)` depending on the default
+    ///
+    /// ```no_run
+    /// use promptly::Promptable;
+    /// bool::prompt_default("Would you like to send us money?", true);
+    /// ```
     fn prompt_default<S: AsRef<str>>(msg: S, default: Self) -> Self {
         let msg = match default {
             true => format!("{} (Y/n)", msg.as_ref()),

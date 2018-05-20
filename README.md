@@ -2,7 +2,7 @@
 
 A simple, opinionated prompting library
 
-Basic features include:
+Features include:
 
 - Re-prompt until valid
 - Prompts for several types, and extensible
