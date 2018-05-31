@@ -42,62 +42,6 @@ pub trait Promptable: Sized {
     fn prompt_default<S: AsRef<str>>(msg: S, default: Self) -> Self;
 }
 
-/// Quick hack around specialization issues
-pub trait Parseable: FromStr + Display {}
-default impl<T> Parseable for T
-where
-    T: FromStr + Display,
-{
-}
-
-/*default impl<T> Promptable for T
-where
-    T: FromStr + Display,
-    <T as FromStr>::Err: ::std::error::Error,*/
-
-/// Blanket impl for `FromStr` types. Re-prompts until `FromStr` parsing succeeds.
-default impl<T> Promptable for T
-where
-    T: Parseable,
-    <T as FromStr>::Err: ::std::error::Error,
-{
-    /// Prompt until the input parses into the specified type
-    ///
-    /// ```no_run
-    /// use promptly::Promptable;
-    /// u32::prompt("Enter your age");
-    /// ```
-    fn prompt<S: AsRef<str>>(msg: S) -> Self {
-        prompt_parse(msg)
-    }
-
-    /// Prompt for an optional, parseable value.
-    ///
-    /// Returns `None` if empty, otherwise prompts until input parses into specified type.
-    ///
-    /// ```no_run
-    /// # use std::net::IpAddr;
-    /// use promptly::Promptable;
-    /// IpAddr::prompt_opt("Enter your IP Address (optional)");
-    /// ```
-    fn prompt_opt<S: AsRef<str>>(msg: S) -> Option<Self> {
-        prompt_parse_opt(msg)
-    }
-
-    /// Prompt for a parseable value with a provided fallback value if empty.
-    ///
-    /// ```no_run
-    /// use promptly::Promptable;
-    /// u32::prompt_default("Enter the year", 2018);
-    /// ```
-    ///
-    /// Default value is visible in the prompt as: `(default=USA)`
-    fn prompt_default<S: AsRef<str>>(msg: S, default: Self) -> Self {
-        let msg = format!("{} (default={})", msg.as_ref(), default);
-        prompt_parse_opt(msg).unwrap_or(default)
-    }
-}
-
 impl Promptable for String {
     /// Prompt until you get a non-empty string
     ///
@@ -204,6 +148,49 @@ impl<P: Promptable> Promptable for Option<P> {
     }
     fn prompt_default<S: AsRef<str>>(msg: S, default: Self) -> Self {
         P::prompt_opt(msg).or(default)
+    }
+}
+
+/// Blanket impl for `FromStr` types. Re-prompts until `FromStr` parsing succeeds.
+impl<T> Promptable for T
+where
+    T: FromStr + Display,
+    <T as FromStr>::Err: ::std::error::Error
+{
+    /// Prompt until the input parses into the specified type
+    ///
+    /// ```no_run
+    /// use promptly::Promptable;
+    /// u32::prompt("Enter your age");
+    /// ```
+    default fn prompt<S: AsRef<str>>(msg: S) -> Self {
+        prompt_parse(msg)
+    }
+
+    /// Prompt for an optional, parseable value.
+    ///
+    /// Returns `None` if empty, otherwise prompts until input parses into specified type.
+    ///
+    /// ```no_run
+    /// # use std::net::IpAddr;
+    /// use promptly::Promptable;
+    /// IpAddr::prompt_opt("Enter your IP Address (optional)");
+    /// ```
+    default fn prompt_opt<S: AsRef<str>>(msg: S) -> Option<Self> {
+        prompt_parse_opt(msg)
+    }
+
+    /// Prompt for a parseable value with a provided fallback value if empty.
+    ///
+    /// ```no_run
+    /// use promptly::Promptable;
+    /// u32::prompt_default("Enter the year", 2018);
+    /// ```
+    ///
+    /// Default value is visible in the prompt as: `(default=USA)`
+    default fn prompt_default<S: AsRef<str>>(msg: S, default: Self) -> Self {
+        let msg = format!("{} (default={})", msg.as_ref(), default);
+        prompt_parse_opt(msg).unwrap_or(default)
     }
 }
 
