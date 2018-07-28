@@ -1,4 +1,4 @@
-#![feature(specialization)]
+#![cfg_attr(feature="nightly", feature(specialization))]
 
 //! Simply call `prompt`, `prompt_opt`, or `prompt_default` on a `Promptable` type:
 //!
@@ -20,13 +20,17 @@
 //! ```
 
 extern crate rustyline;
+#[cfg(feature = "url")]
+extern crate url;
 
 use rustyline::completion::{Completer, FilenameCompleter};
 use rustyline::{error::ReadlineError, Editor};
 use std::env;
-use std::fmt::Display;
 use std::path::PathBuf;
 use std::str::FromStr;
+
+#[cfg(feature = "nightly")]
+use std::fmt::Display;
 
 /// A trait for convenient, opinionated prompting
 pub trait Promptable: Sized {
@@ -151,6 +155,35 @@ impl<P: Promptable> Promptable for Option<P> {
     }
 }
 
+macro_rules! impl_promptable_from_str {
+    ($t:ty) => {
+        impl Promptable for $t {
+            fn prompt<S: AsRef<str>>(msg: S) -> Self {
+                prompt_parse(msg)
+            }
+
+            fn prompt_opt<S: AsRef<str>>(msg: S) -> Option<Self> {
+                prompt_parse_opt(msg)
+            }
+
+            fn prompt_default<S: AsRef<str>>(msg: S, default: Self) -> Self {
+                let msg = format!("{} (default={})", msg.as_ref(), default);
+                prompt_parse_opt(msg).unwrap_or(default)
+            }
+        }
+    }
+}
+
+impl_promptable_from_str!(u32);
+impl_promptable_from_str!(u64);
+impl_promptable_from_str!(i32);
+impl_promptable_from_str!(i64);
+impl_promptable_from_str!(::std::net::IpAddr);
+
+#[cfg(feature = "url")]
+impl_promptable_from_str!(::url::Url);
+
+#[cfg(feature = "nightly")]
 /// Blanket impl for `FromStr` types. Re-prompts until `FromStr` parsing succeeds.
 impl<T> Promptable for T
 where

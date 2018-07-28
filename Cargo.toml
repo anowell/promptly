@@ -12,3 +12,8 @@ readme = "README.md"
 
 [dependencies]
 rustyline = "1.0.0"
+url = { version = "1.7.0", optional = true }
+
+[features]
+default = []
+nightly = []
