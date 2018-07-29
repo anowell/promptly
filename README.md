@@ -12,20 +12,35 @@ Features include:
 
 ## Usage
 
+Simply call `prompt` or `prompt_default` to prompt for any `Promptable` type:
+
+- `prompt(msg)` - prompt until input can be parsed as the inferred return type. Re-prompts for empty string input unless type is an `Option<T>`
+- `prompt_default(msg, default)` - prompt until input can be parsed as the inferred return type. Uses `default` value if input is empty string.
+
+
 ```rust
-use promptly::Promptable;
+use promptly::{prompt, prompt_default};
 
 // Prompt until a non-empty string is provided
-let name = String::prompt("Enter your name");
+let name: String = prompt("Enter your name");
 
 // Prompt for other `FromStr` types
-let age = u32::prompt("Enter your age");
+let age: u32 = prompt("Enter your age");
 
 // Prompt for optional paths with path completion. Returns `None` if empty input.
-let photo = PathBuf::prompt_opt("Enter a path to a profile picture");
+let photo: Option<PathBuf> = prompt("Enter a path to a profile picture");
 
 // Prompt Y/n with a default value when input is empty
-let fallback = bool::prompt_default("Would you like to receive marketing emails", true);
+let fallback = prompt_default("Would you like to receive marketing emails", true);
+
+// Prompt for a url using the url crate (requires either 'nightly' or 'url' feature)
+let website: Url = prompt("Enter a website URL");
 ```
 
-There are a few other bits exposed that might evolve a bit, but the above really captures the gist of it.
+## More...
+
+The API surface of this crate is opinionated and experimental, but open to fresh ideas.
+Some additional bits hiding under the surface:
+
+- `Promptable` trait provides implementations that prompt for many common types, and provides a way to add support for additional types.
+- `Prompter` struct provides lower-level control that powers the friendly readline experience. It's especially unclear how this type will evolve.

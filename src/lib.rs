@@ -1,23 +1,29 @@
 #![cfg_attr(feature="nightly", feature(specialization))]
 
-//! Simply call `prompt`, `prompt_opt`, or `prompt_default` on a `Promptable` type:
+//! Simply call `prompt` or `prompt_default` to prompt for any `Promptable` type:
+//!
+//! ## Examples
 //!
 //! ```no_run
 //! # use std::path::PathBuf;
-//! use promptly::Promptable;
+//! use promptly::{prompt, prompt_default};
 //!
 //! // Prompt until a non-empty string is provided
-//! let name = String::prompt("Enter your name");
+//! let name: String = prompt("Enter your name");
 //!
 //! // Prompt for other `FromStr` types
-//! let age = u32::prompt("Enter your age");
+//! let age: u32 = prompt("Enter your age");
 //!
 //! // Prompt for optional paths with path completion. Returns `None` if empty input.
-//! let photo = PathBuf::prompt_opt("Enter a path to a profile picture");
+//! let photo: Option<PathBuf> = prompt("Enter a path to a profile picture");
 //!
 //! // Prompt Y/n with a default value when input is empty
-//! let fallback = bool::prompt_default("Would you like to receive marketing emails", true);
+//! let fallback = prompt_default("Would you like to receive marketing emails", true);
 //! ```
+//!
+//! ## Errors
+//! If readline fails to read from stdin, this call will exit the process with an exit code of `1`.
+//! All other errors just result in re-prompting.
 
 extern crate rustyline;
 #[cfg(feature = "url")]
@@ -31,6 +37,70 @@ use std::str::FromStr;
 
 #[cfg(feature = "nightly")]
 use std::fmt::Display;
+
+
+/// Prompt until input can be parsed as `T`.
+///
+/// Empty string input causes a re-prompt (including for `String`)
+/// except when `T` is an `Option`-wrapped type.
+///
+/// ## Examples
+///
+/// ```no_run
+/// # use std::path::PathBuf;
+/// use promptly::{prompt, prompt_default};
+///
+/// // Prompt until a non-empty string is provided
+/// let name: String = prompt("Enter your name");
+///
+/// // Prompt for an optional string
+/// let name: Option<String> = prompt("Enter your name (optional)");
+///
+/// // Prompt for other `FromStr` types
+/// let age: u32 = prompt("Enter your age");
+///
+/// // Prompt for optional paths with path completion. Returns `None` if empty input.
+/// let photo: Option<PathBuf> = prompt("Enter a path to a profile picture");
+/// ```
+///
+/// ## Errors
+/// If readline fails to read from stdin, this call will exit the process with an exit code of `1`.
+/// All other errors just result in re-prompting.
+pub fn prompt<T, S>(msg: S) -> T
+where T: Promptable,
+      S: AsRef<str>,
+{
+    T::prompt(msg)
+}
+
+/// Prompt until input can be parsed as `T`, returning the `default` for empty input.
+///
+/// ## Examples
+///
+/// ```no_run
+/// # use std::net::Ipv4Addr;
+/// # use std::path::PathBuf;
+/// use promptly::{prompt, prompt_default};
+///
+/// // Prompt Y/n with a default value when input is empty
+/// let fallback = prompt_default("Would you like to receive marketing emails", true);
+///
+/// // Prompt for a string with default
+/// let fav_lang = prompt_default("Enter you favorite programming language", "Rust".to_string());
+///
+/// // Prompt for other `FromStr` types
+/// let local_ip = prompt_default("Enter your local IP", Ipv4Addr::new(127, 0, 0, 1));
+/// ```
+///
+/// ## Errors
+/// If readline fails to read from stdin, this call will exit the process with an exit code of `1`.
+/// All other errors just result in re-prompting.
+pub fn prompt_default<T, S>(msg: S, default: T) -> T
+where T: Promptable,
+      S: AsRef<str>,
+{
+    T::prompt_default(msg, default)
+}
 
 /// A trait for convenient, opinionated prompting
 pub trait Promptable: Sized {
@@ -178,7 +248,11 @@ impl_promptable_from_str!(u32);
 impl_promptable_from_str!(u64);
 impl_promptable_from_str!(i32);
 impl_promptable_from_str!(i64);
+impl_promptable_from_str!(f32);
+impl_promptable_from_str!(f64);
 impl_promptable_from_str!(::std::net::IpAddr);
+impl_promptable_from_str!(::std::net::Ipv4Addr);
+impl_promptable_from_str!(::std::net::Ipv6Addr);
 
 #[cfg(feature = "url")]
 impl_promptable_from_str!(::url::Url);
@@ -230,14 +304,24 @@ where
 /// Optinionated wrapper around rustyline to prompt for strings
 pub struct Prompter<C: Completer> {
     editor: Editor<C>,
+    err_handler: Box<Fn(ReadlineError)>, // TODO: closure should return Never type
 }
 
 impl Prompter<()> {
     pub fn new() -> Prompter<()> {
         Prompter {
             editor: Editor::new(),
+            err_handler: Box::new(default_err_handler)
         }
     }
+}
+
+fn default_err_handler(err: ReadlineError) {
+    match err {
+        ReadlineError::Interrupted => (),
+        _ => println!("Readline error: {}", err),
+    }
+    ::std::process::exit(1);
 }
 
 impl<C> Prompter<C>
@@ -247,18 +331,22 @@ where
     pub fn with_completer(completer: C) -> Prompter<C> {
         let mut editor = Editor::new();
         editor.set_completer(Some(completer));
-        Prompter { editor }
+        Prompter {
+            editor,
+            err_handler: Box::new(default_err_handler)
+        }
+    }
+
+    pub fn on_error<F: Fn(ReadlineError) + 'static>(mut self, handler: F) {
+        self.err_handler = Box::new(handler);
     }
 
     pub fn prompt_once<S: AsRef<str>>(&mut self, msg: S) -> String {
         match self.editor.readline(&format!("{}: ", msg.as_ref())) {
             Ok(line) => line.trim().to_owned(),
             Err(err) => {
-                match err {
-                    ReadlineError::Interrupted => (),
-                    _ => println!("Readline error: {}", err),
-                }
-                ::std::process::exit(1);
+                (self.err_handler)(err);
+                unreachable!("Prompter's on_error handler should never return")
             }
         }
     }
