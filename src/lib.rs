@@ -310,6 +310,12 @@ pub struct Prompter<C: Completer> {
 
 impl Prompter<()> {
     pub fn new() -> Prompter<()> {
+        Prompter::default()
+    }
+}
+
+impl Default for Prompter<()> {
+    fn default() -> Self {
         Prompter {
             editor: Editor::new(),
             err_handler: Box::new(default_err_handler)
