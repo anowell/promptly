@@ -203,9 +203,10 @@ impl Promptable for bool {
     /// bool::prompt_default("Would you like to send us money?", true);
     /// ```
     fn prompt_default<S: AsRef<str>>(msg: S, default: Self) -> Self {
-        let msg = match default {
-            true => format!("{} (Y/n)", msg.as_ref()),
-            false => format!("{} (y/N)", msg.as_ref()),
+        let msg = if default {
+            format!("{} (Y/n)", msg.as_ref())
+        } else {
+            format!("{} (y/N)", msg.as_ref())
         };
         prompt_bool_opt(msg).unwrap_or(default)
     }
