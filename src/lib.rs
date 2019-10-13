@@ -304,7 +304,7 @@ where
 /// Optinionated wrapper around rustyline to prompt for strings
 pub struct Prompter<C: Completer> {
     editor: Editor<C>,
-    err_handler: Box<Fn(ReadlineError)>, // TODO: closure should return Never type
+    err_handler: Box<dyn Fn(ReadlineError)>, // TODO: closure should return Never type
 }
 
 impl Prompter<()> {
