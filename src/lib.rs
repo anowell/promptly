@@ -453,7 +453,7 @@ where
 }
 
 fn path_expand(s: String) -> String {
-    if s.starts_with("~") {
+    if s.starts_with('~') {
         if let Ok(home) = env::var("HOME") {
             return s.replacen("~", &home, 1);
         }
