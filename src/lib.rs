@@ -203,9 +203,10 @@ impl Promptable for bool {
     /// bool::prompt_default("Would you like to send us money?", true);
     /// ```
     fn prompt_default<S: AsRef<str>>(msg: S, default: Self) -> Self {
-        let msg = match default {
-            true => format!("{} (Y/n)", msg.as_ref()),
-            false => format!("{} (y/N)", msg.as_ref()),
+        let msg = if default {
+            format!("{} (Y/n)", msg.as_ref())
+        } else {
+            format!("{} (y/N)", msg.as_ref())
         };
         prompt_bool_opt(msg).unwrap_or(default)
     }
@@ -304,11 +305,17 @@ where
 /// Optinionated wrapper around rustyline to prompt for strings
 pub struct Prompter<C: Completer> {
     editor: Editor<C>,
-    err_handler: Box<Fn(ReadlineError)>, // TODO: closure should return Never type
+    err_handler: Box<dyn Fn(ReadlineError)>, // TODO: closure should return Never type
 }
 
 impl Prompter<()> {
     pub fn new() -> Prompter<()> {
+        Prompter::default()
+    }
+}
+
+impl Default for Prompter<()> {
+    fn default() -> Self {
         Prompter {
             editor: Editor::new(),
             err_handler: Box::new(default_err_handler)
@@ -446,7 +453,7 @@ where
 }
 
 fn path_expand(s: String) -> String {
-    if s.starts_with("~") {
+    if s.starts_with('~') {
         if let Ok(home) = env::var("HOME") {
             return s.replacen("~", &home, 1);
         }
