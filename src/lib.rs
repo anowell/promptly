@@ -1,4 +1,4 @@
-#![cfg_attr(feature="nightly", feature(specialization))]
+#![cfg_attr(feature = "nightly", feature(specialization))]
 
 //! Simply call `prompt` or `prompt_default` to prompt for any `Promptable` type:
 //!
@@ -25,10 +25,6 @@
 //! If readline fails to read from stdin, this call will exit the process with an exit code of `1`.
 //! All other errors just result in re-prompting.
 
-extern crate rustyline;
-#[cfg(feature = "url")]
-extern crate url;
-
 use rustyline::completion::{Completer, FilenameCompleter};
 use rustyline::{error::ReadlineError, Editor};
 use std::env;
@@ -37,7 +33,6 @@ use std::str::FromStr;
 
 #[cfg(feature = "nightly")]
 use std::fmt::Display;
-
 
 /// Prompt until input can be parsed as `T`.
 ///
@@ -67,8 +62,9 @@ use std::fmt::Display;
 /// If readline fails to read from stdin, this call will exit the process with an exit code of `1`.
 /// All other errors just result in re-prompting.
 pub fn prompt<T, S>(msg: S) -> T
-where T: Promptable,
-      S: AsRef<str>,
+where
+    T: Promptable,
+    S: AsRef<str>,
 {
     T::prompt(msg)
 }
@@ -96,8 +92,9 @@ where T: Promptable,
 /// If readline fails to read from stdin, this call will exit the process with an exit code of `1`.
 /// All other errors just result in re-prompting.
 pub fn prompt_default<T, S>(msg: S, default: T) -> T
-where T: Promptable,
-      S: AsRef<str>,
+where
+    T: Promptable,
+    S: AsRef<str>,
 {
     T::prompt_default(msg, default)
 }
@@ -121,7 +118,7 @@ pub trait Promptable: Sized {
 default impl<T> Promptable for T
 where
     T: FromStr + Display,
-    <T as FromStr>::Err: ::std::error::Error
+    <T as FromStr>::Err: ::std::error::Error,
 {
     /// Prompt until the input parses into the specified type
     ///
@@ -256,7 +253,6 @@ impl Promptable for bool {
     }
 }
 
-
 // Macro to provide Promptable implementations until specialization stabilizes
 macro_rules! impl_promptable_from_str {
     ($t:ty) => {
@@ -274,7 +270,7 @@ macro_rules! impl_promptable_from_str {
                 prompt_parse_opt(msg).unwrap_or(default)
             }
         }
-    }
+    };
 }
 
 impl_promptable_from_str!(char);
@@ -311,8 +307,7 @@ impl_promptable_from_str!(::std::num::NonZeroU8);
 impl_promptable_from_str!(::std::num::NonZeroUsize);
 
 #[cfg(feature = "url")]
-impl_promptable_from_str!(::url::Url);
-
+impl_promptable_from_str!(url::Url);
 
 /// Optinionated wrapper around rustyline to prompt for strings
 pub struct Prompter<C: Completer> {
@@ -330,7 +325,7 @@ impl Default for Prompter<()> {
     fn default() -> Self {
         Prompter {
             editor: Editor::new(),
-            err_handler: Box::new(default_err_handler)
+            err_handler: Box::new(default_err_handler),
         }
     }
 }
@@ -352,7 +347,7 @@ where
         editor.set_completer(Some(completer));
         Prompter {
             editor,
-            err_handler: Box::new(default_err_handler)
+            err_handler: Box::new(default_err_handler),
         }
     }
 
