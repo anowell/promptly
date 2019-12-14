@@ -6,7 +6,7 @@
 //!
 //! ```no_run
 //! # use std::path::PathBuf;
-//! use promptly::{prompt, prompt_default};
+//! use promptly::{prompt, prompt_opt, prompt_default};
 //!
 //! // Prompt until a non-empty string is provided
 //! let name: String = prompt("Enter your name");
@@ -15,7 +15,7 @@
 //! let age: u32 = prompt("Enter your age");
 //!
 //! // Prompt for optional paths with path completion. Returns `None` if empty input.
-//! let photo: Option<PathBuf> = prompt("Enter a path to a profile picture");
+//! let photo: Option<PathBuf> = prompt_opt("Enter a path to a profile picture");
 //!
 //! // Prompt Y/n with a default value when input is empty
 //! let fallback = prompt_default("Would you like to receive marketing emails", true);
@@ -37,25 +37,18 @@ use std::fmt::Display;
 /// Prompt until input can be parsed as `T`.
 ///
 /// Empty string input causes a re-prompt (including for `String`)
-/// except when `T` is an `Option`-wrapped type.
 ///
 /// ## Examples
 ///
 /// ```no_run
 /// # use std::path::PathBuf;
-/// use promptly::{prompt, prompt_default};
+/// use promptly::prompt;
 ///
 /// // Prompt until a non-empty string is provided
 /// let name: String = prompt("Enter your name");
 ///
-/// // Prompt for an optional string
-/// let name: Option<String> = prompt("Enter your name (optional)");
-///
 /// // Prompt for other `FromStr` types
 /// let age: u32 = prompt("Enter your age");
-///
-/// // Prompt for optional paths with path completion. Returns `None` if empty input.
-/// let photo: Option<PathBuf> = prompt("Enter a path to a profile picture");
 /// ```
 ///
 /// ## Errors
@@ -69,6 +62,34 @@ where
     T::prompt(msg)
 }
 
+/// Prompt until input can be parsed as `T`.
+///
+/// Empty string input results in `None`
+///
+/// ## Examples
+///
+/// ```no_run
+/// # use std::path::PathBuf;
+/// use promptly::prompt_opt;
+///
+/// // Prompt for an optional string
+/// let name: Option<String> = prompt_opt("Enter your name (optional)");
+///
+/// // Prompt for optional paths with path completion. Returns `None` if empty input.
+/// let photo: Option<PathBuf> = prompt_opt("Enter a path to a profile picture");
+/// ```
+///
+/// ## Errors
+/// If readline fails to read from stdin, this call will exit the process with an exit code of `1`.
+/// All other errors just result in re-prompting.
+pub fn prompt_opt<T, S>(msg: S) -> Option<T>
+where
+    T: Promptable,
+    S: AsRef<str>,
+{
+    T::prompt_opt(msg)
+}
+
 /// Prompt until input can be parsed as `T`, returning the `default` for empty input.
 ///
 /// ## Examples
@@ -76,7 +97,7 @@ where
 /// ```no_run
 /// # use std::net::Ipv4Addr;
 /// # use std::path::PathBuf;
-/// use promptly::{prompt, prompt_default};
+/// use promptly::prompt_default;
 ///
 /// // Prompt Y/n with a default value when input is empty
 /// let fallback = prompt_default("Would you like to receive marketing emails", true);
