@@ -14,21 +14,22 @@ Features include:
 
 Simply call `prompt` or `prompt_default` to prompt for any `Promptable` type:
 
-- `prompt(msg)` - prompt until input can be parsed as the inferred return type. Re-prompts for empty string input unless type is an `Option<T>`
-- `prompt_default(msg, default)` - prompt until input can be parsed as the inferred return type. Uses `default` value if input is empty string.
+- `prompt(msg)` - prompt until input can be parsed as the inferred return type. Re-prompts if input is empty.
+- `prompt_opt(msg)` - prompt until input can be parsed as the inferred return type. Returns `None` if input is empty.
+- `prompt_default(msg, default)` - prompt until input can be parsed as the inferred return type. Uses `default` value if input is empty.
 
 
 ```rust
-use promptly::{prompt, prompt_default};
+use promptly::{prompt, prompt_default, prompt_opt};
 
 // Prompt until a non-empty string is provided
-let name: String = prompt("Enter your name");
+let name: String = prompt("Enter your name")?;
 
 // Prompt for other `FromStr` types
-let age: u32 = prompt("Enter your age");
+let age: u32 = prompt("Enter your age")?;
 
 // Prompt for optional paths with path completion. Returns `None` if empty input.
-let photo: Option<PathBuf> = prompt("Enter a path to a profile picture");
+let photo: Option<PathBuf> = prompt_opt("Enter a path to a profile picture")?;
 
 // Prompt Y/n with a default value when input is empty
 let fallback = prompt_default("Would you like to receive marketing emails", true);
@@ -40,7 +41,4 @@ let website: Url = prompt("Enter a website URL");
 ## More...
 
 The API surface of this crate is opinionated and experimental, but open to fresh ideas.
-Some additional bits hiding under the surface:
 
-- `Promptable` trait provides implementations that prompt for many common types, and provides a way to add support for additional types.
-- `Prompter` struct provides lower-level control that powers the friendly readline experience. It's especially unclear how this type will evolve.
