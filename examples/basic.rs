@@ -1,18 +1,23 @@
 use promptly::{prompt, prompt_default, prompt_opt, Promptable};
 use std::error::Error;
 use std::path::PathBuf;
+use std::fmt::Debug;
 
-fn test<P: Promptable>(ty: &str, default: P) {
-    let _ = prompt::<P, _>(ty);
-    let _ = prompt_opt::<P, _>(format!("Option<{}>", ty));
-    let _ = prompt_default::<P, _>(ty, default);
+fn test<P: Promptable + Debug>(ty: &str, default: P) -> Result<(), Box<dyn Error>> {
+    let res = prompt::<P, _>(ty)?;
+    println!("=> {:?}", res);
+    let res = prompt_opt::<P, _>(format!("Option<{}>", ty))?;
+    println!("=> {:?}", res);
+    let res = prompt_default::<P, _>(ty, default)?;
+    println!("=> {:?}", res);
+    Ok(())
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    test::<String>("String", "DefaultValue".to_string());
-    test::<u32>("u32", 0);
-    test::<bool>("u32", false);
-    test::<PathBuf>("PathBuf", PathBuf::from("/home"));
+    test::<String>("String", "DefaultValue".to_string())?;
+    test::<u32>("u32", 0)?;
+    test::<bool>("bool", false)?;
+    test::<PathBuf>("PathBuf", PathBuf::from("/home"))?;
 
     Ok(())
 }
