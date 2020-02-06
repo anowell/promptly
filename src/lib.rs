@@ -9,27 +9,28 @@
 //! use promptly::{prompt, prompt_opt, prompt_default};
 //!
 //! // Prompt until a non-empty string is provided
-//! let name: String = prompt("Enter your name");
+//! let name: String = prompt("Enter your name")?;
 //!
 //! // Prompt for other `FromStr` types
-//! let age: u32 = prompt("Enter your age");
+//! let age: u32 = prompt("Enter your age")?;
 //!
 //! // Prompt for optional paths with path completion. Returns `None` if empty input.
-//! let photo: Option<PathBuf> = prompt_opt("Enter a path to a profile picture");
+//! let photo: Option<PathBuf> = prompt_opt("Enter a path to a profile picture")?;
 //!
 //! // Prompt Y/n with a default value when input is empty
-//! let fallback = prompt_default("Would you like to receive marketing emails", true);
-//! ```
+//! let fallback = prompt_default("Would you like to receive marketing emails", true)?;
 //!
-//! ## Errors
-//! If readline fails to read from stdin, this call will exit the process with an exit code of `1`.
-//! All other errors just result in re-prompting.
+//! # Result::<_,Box<std::error::Error>>::Ok(())
+//! ```
 
 use rustyline::completion::{Completer, FilenameCompleter};
-use rustyline::{error::ReadlineError, Editor};
+use rustyline::Editor;
 use std::env;
 use std::path::PathBuf;
 use std::str::FromStr;
+
+pub use rustyline::error::ReadlineError;
+type Result<T> = std::result::Result<T, ReadlineError>;
 
 #[cfg(feature = "nightly")]
 use std::fmt::Display;
@@ -45,16 +46,18 @@ use std::fmt::Display;
 /// use promptly::prompt;
 ///
 /// // Prompt until a non-empty string is provided
-/// let name: String = prompt("Enter your name");
+/// let name: String = prompt("Enter your name")?;
 ///
 /// // Prompt for other `FromStr` types
-/// let age: u32 = prompt("Enter your age");
+/// let age: u32 = prompt("Enter your age")?;
+///
+/// # Result::<_,Box<std::error::Error>>::Ok(())
 /// ```
 ///
 /// ## Errors
-/// If readline fails to read from stdin, this call will exit the process with an exit code of `1`.
-/// All other errors just result in re-prompting.
-pub fn prompt<T, S>(msg: S) -> T
+/// Returns a `ReadlineError` if readline fails.
+/// Input that can't be coerced into the specified type results in re-prompting.
+pub fn prompt<T, S>(msg: S) -> Result<T>
 where
     T: Promptable,
     S: AsRef<str>,
@@ -73,16 +76,18 @@ where
 /// use promptly::prompt_opt;
 ///
 /// // Prompt for an optional string
-/// let name: Option<String> = prompt_opt("Enter your name (optional)");
+/// let name: Option<String> = prompt_opt("Enter your name (optional)")?;
 ///
 /// // Prompt for optional paths with path completion. Returns `None` if empty input.
-/// let photo: Option<PathBuf> = prompt_opt("Enter a path to a profile picture");
+/// let photo: Option<PathBuf> = prompt_opt("Enter a path to a profile picture")?;
+///
+/// # Result::<_,Box<std::error::Error>>::Ok(())
 /// ```
 ///
 /// ## Errors
-/// If readline fails to read from stdin, this call will exit the process with an exit code of `1`.
-/// All other errors just result in re-prompting.
-pub fn prompt_opt<T, S>(msg: S) -> Option<T>
+/// Returns a `ReadlineError` if readline fails.
+/// Input that can't be coerced into the specified type results in re-prompting.
+pub fn prompt_opt<T, S>(msg: S) -> Result<Option<T>>
 where
     T: Promptable,
     S: AsRef<str>,
@@ -100,19 +105,21 @@ where
 /// use promptly::prompt_default;
 ///
 /// // Prompt Y/n with a default value when input is empty
-/// let fallback = prompt_default("Would you like to receive marketing emails", true);
+/// let fallback = prompt_default("Would you like to receive marketing emails", true)?;
 ///
 /// // Prompt for a string with default
-/// let fav_lang = prompt_default("Enter you favorite programming language", "Rust".to_string());
+/// let fav_lang = prompt_default("Enter you favorite programming language", "Rust".to_string())?;
 ///
 /// // Prompt for other `FromStr` types
-/// let local_ip = prompt_default("Enter your local IP", Ipv4Addr::new(127, 0, 0, 1));
+/// let local_ip = prompt_default("Enter your local IP", Ipv4Addr::new(127, 0, 0, 1))?;
+///
+/// # Result::<_,Box<std::error::Error>>::Ok(())
 /// ```
 ///
 /// ## Errors
-/// If readline fails to read from stdin, this call will exit the process with an exit code of `1`.
-/// All other errors just result in re-prompting.
-pub fn prompt_default<T, S>(msg: S, default: T) -> T
+/// Returns a `ReadlineError` if readline fails.
+/// Input that can't be coerced into the specified type results in re-prompting.
+pub fn prompt_default<T, S>(msg: S, default: T) -> Result<T>
 where
     T: Promptable,
     S: AsRef<str>,
@@ -123,15 +130,15 @@ where
 /// A trait for convenient, opinionated prompting
 pub trait Promptable: Sized {
     /// Prompts for a value. Re-prompts on invalid and empty input.
-    fn prompt<S: AsRef<str>>(msg: S) -> Self;
+    fn prompt<S: AsRef<str>>(msg: S) -> Result<Self>;
 
     /// Prompts for a value, returning `None` for empty input. Re-prompts on invalid input.
-    fn prompt_opt<S: AsRef<str>>(msg: S) -> Option<Self>;
+    fn prompt_opt<S: AsRef<str>>(msg: S) -> Result<Option<Self>>;
 
     /// Prompts for a value with a default value for empty input. Re-prompts on invalid input.
     ///
     /// The default value will be mentioned in the prompt message
-    fn prompt_default<S: AsRef<str>>(msg: S, default: Self) -> Self;
+    fn prompt_default<S: AsRef<str>>(msg: S, default: Self) -> Result<Self>;
 }
 
 #[cfg(feature = "nightly")]
@@ -145,9 +152,10 @@ where
     ///
     /// ```no_run
     /// use promptly::Promptable;
-    /// u32::prompt("Enter your age");
+    /// u32::prompt("Enter your age")?;
+    /// # Result::<_,Box<std::error::Error>>::Ok(())
     /// ```
-    fn prompt<S: AsRef<str>>(msg: S) -> Self {
+    fn prompt<S: AsRef<str>>(msg: S) -> Result<Self> {
         prompt_parse(msg)
     }
 
@@ -158,9 +166,10 @@ where
     /// ```no_run
     /// # use std::net::IpAddr;
     /// use promptly::Promptable;
-    /// IpAddr::prompt_opt("Enter your IP Address (optional)");
+    /// IpAddr::prompt_opt("Enter your IP Address (optional)")?;
+    /// # Result::<_,Box<std::error::Error>>::Ok(())
     /// ```
-    fn prompt_opt<S: AsRef<str>>(msg: S) -> Option<Self> {
+    fn prompt_opt<S: AsRef<str>>(msg: S) -> Result<Option<Self>> {
         prompt_parse_opt(msg)
     }
 
@@ -168,11 +177,12 @@ where
     ///
     /// ```no_run
     /// use promptly::Promptable;
-    /// u32::prompt_default("Enter the year", 2018);
+    /// u32::prompt_default("Enter the year", 2018)?;
+    /// # Result::<_,Box<std::error::Error>>::Ok(())
     /// ```
     ///
     /// Default value is visible in the prompt as: `(default=USA)`
-    fn prompt_default<S: AsRef<str>>(msg: S, default: Self) -> Self {
+    fn prompt_default<S: AsRef<str>>(msg: S, default: Self) -> Result<Self> {
         let msg = format!("{} (default={})", msg.as_ref(), default);
         prompt_parse_opt(msg).unwrap_or(default)
     }
@@ -183,9 +193,10 @@ impl Promptable for String {
     ///
     /// ```no_run
     /// use promptly::Promptable;
-    /// String::prompt("Enter your name");
+    /// String::prompt("Enter your name")?;
+    /// # Result::<_,Box<std::error::Error>>::Ok(())
     /// ```
-    fn prompt<S: AsRef<str>>(msg: S) -> Self {
+    fn prompt<S: AsRef<str>>(msg: S) -> Result<Self> {
         Prompter::new().prompt_nonempty(msg)
     }
 
@@ -193,9 +204,10 @@ impl Promptable for String {
     ///
     /// ```no_run
     /// use promptly::Promptable;
-    /// String::prompt_opt("Enter your phone number (optional)");
+    /// String::prompt_opt("Enter your phone number (optional)")?;
+    /// # Result::<_,Box<std::error::Error>>::Ok(())
     /// ```
-    fn prompt_opt<S: AsRef<str>>(msg: S) -> Option<Self> {
+    fn prompt_opt<S: AsRef<str>>(msg: S) -> Result<Option<Self>> {
         Prompter::new().prompt_opt(msg)
     }
 
@@ -203,30 +215,31 @@ impl Promptable for String {
     ///
     /// ```no_run
     /// use promptly::Promptable;
-    /// String::prompt_default("Enter your country", "USA".into());
+    /// String::prompt_default("Enter your country", "USA".into())?;
+    /// # Result::<_,Box<std::error::Error>>::Ok(())
     /// ```
     ///
     /// Default value is visible in the prompt as: `(default=USA)`
-    fn prompt_default<S: AsRef<str>>(msg: S, default: Self) -> Self {
+    fn prompt_default<S: AsRef<str>>(msg: S, default: Self) -> Result<Self> {
         let msg = format!("{} (default={})", msg.as_ref(), default);
-        Prompter::new().prompt_opt(msg).unwrap_or(default)
+        Ok(Prompter::new().prompt_opt(msg)?.unwrap_or(default))
     }
 }
 
 /// PathBuf prompting will use a path autocompleter
 impl Promptable for PathBuf {
     /// Prompt until you get a non-empty path
-    fn prompt<S: AsRef<str>>(msg: S) -> Self {
+    fn prompt<S: AsRef<str>>(msg: S) -> Result<Self> {
         prompt_path(msg)
     }
     /// Prompt for an optional path
-    fn prompt_opt<S: AsRef<str>>(msg: S) -> Option<Self> {
+    fn prompt_opt<S: AsRef<str>>(msg: S) -> Result<Option<Self>> {
         prompt_path_opt(msg)
     }
     /// Prompt for a path with a provided fallback value if empty
-    fn prompt_default<S: AsRef<str>>(msg: S, default: Self) -> Self {
+    fn prompt_default<S: AsRef<str>>(msg: S, default: Self) -> Result<Self> {
         let msg = format!("{} (default={})", msg.as_ref(), default.display());
-        prompt_path_opt(msg).unwrap_or(default)
+        Ok(prompt_path_opt(msg)?.unwrap_or(default))
     }
 }
 
@@ -238,9 +251,10 @@ impl Promptable for bool {
     ///
     /// ```no_run
     /// use promptly::Promptable;
-    /// bool::prompt("Do you accept the terms?");
+    /// bool::prompt("Do you accept the terms?")?;
+    /// # Result::<_,Box<std::error::Error>>::Ok(())
     /// ```
-    fn prompt<S: AsRef<str>>(msg: S) -> Self {
+    fn prompt<S: AsRef<str>>(msg: S) -> Result<Self> {
         prompt_bool(msg)
     }
 
@@ -250,9 +264,10 @@ impl Promptable for bool {
     ///
     /// ```no_run
     /// use promptly::Promptable;
-    /// bool::prompt_opt("Did you even read this question?");
+    /// bool::prompt_opt("Did you even read this question?")?;
+    /// # Result::<_,Box<std::error::Error>>::Ok(())
     /// ```
-    fn prompt_opt<S: AsRef<str>>(msg: S) -> Option<Self> {
+    fn prompt_opt<S: AsRef<str>>(msg: S) -> Result<Option<Self>> {
         prompt_bool_opt(msg)
     }
 
@@ -262,15 +277,16 @@ impl Promptable for bool {
     ///
     /// ```no_run
     /// use promptly::Promptable;
-    /// bool::prompt_default("Would you like to send us money?", true);
+    /// bool::prompt_default("Would you like to send us money?", true)?;
+    /// # Result::<_,Box<std::error::Error>>::Ok(())
     /// ```
-    fn prompt_default<S: AsRef<str>>(msg: S, default: Self) -> Self {
+    fn prompt_default<S: AsRef<str>>(msg: S, default: Self) -> Result<Self> {
         let msg = if default {
             format!("{} (Y/n)", msg.as_ref())
         } else {
             format!("{} (y/N)", msg.as_ref())
         };
-        prompt_bool_opt(msg).unwrap_or(default)
+        Ok(prompt_bool_opt(msg)?.unwrap_or(default))
     }
 }
 
@@ -278,17 +294,17 @@ impl Promptable for bool {
 macro_rules! impl_promptable_from_str {
     ($t:ty) => {
         impl Promptable for $t {
-            fn prompt<S: AsRef<str>>(msg: S) -> Self {
+            fn prompt<S: AsRef<str>>(msg: S) -> Result<Self> {
                 prompt_parse(msg)
             }
 
-            fn prompt_opt<S: AsRef<str>>(msg: S) -> Option<Self> {
+            fn prompt_opt<S: AsRef<str>>(msg: S) -> Result<Option<Self>> {
                 prompt_parse_opt(msg)
             }
 
-            fn prompt_default<S: AsRef<str>>(msg: S, default: Self) -> Self {
+            fn prompt_default<S: AsRef<str>>(msg: S, default: Self) -> Result<Self> {
                 let msg = format!("{} (default={})", msg.as_ref(), default);
-                prompt_parse_opt(msg).unwrap_or(default)
+                Ok(prompt_parse_opt(msg)?.unwrap_or(default))
             }
         }
     };
@@ -333,7 +349,6 @@ impl_promptable_from_str!(url::Url);
 /// Optinionated wrapper around rustyline to prompt for strings
 pub struct Prompter<C: Completer> {
     editor: Editor<C>,
-    err_handler: Box<dyn Fn(ReadlineError)>, // TODO: closure should return Never type
 }
 
 impl Prompter<()> {
@@ -346,17 +361,8 @@ impl Default for Prompter<()> {
     fn default() -> Self {
         Prompter {
             editor: Editor::new(),
-            err_handler: Box::new(default_err_handler),
         }
     }
-}
-
-fn default_err_handler(err: ReadlineError) {
-    match err {
-        ReadlineError::Interrupted => (),
-        _ => println!("Readline error: {}", err),
-    }
-    ::std::process::exit(1);
 }
 
 impl<C> Prompter<C>
@@ -366,58 +372,47 @@ where
     pub fn with_completer(completer: C) -> Prompter<C> {
         let mut editor = Editor::new();
         editor.set_completer(Some(completer));
-        Prompter {
-            editor,
-            err_handler: Box::new(default_err_handler),
-        }
+        Prompter { editor }
     }
 
-    pub fn on_error<F: Fn(ReadlineError) + 'static>(mut self, handler: F) {
-        self.err_handler = Box::new(handler);
-    }
-
-    pub fn prompt_once<S: AsRef<str>>(&mut self, msg: S) -> String {
-        match self.editor.readline(&format!("{}: ", msg.as_ref())) {
-            Ok(line) => line.trim().to_owned(),
-            Err(err) => {
-                (self.err_handler)(err);
-                unreachable!("Prompter's on_error handler should never return")
-            }
-        }
+    pub fn prompt_once<S: AsRef<str>>(&mut self, msg: S) -> Result<String> {
+        self.editor
+            .readline(&format!("{}: ", msg.as_ref()))
+            .map(|line| line.trim().to_owned())
     }
 
     /// Prompts once but returns `None` for empty input
-    pub fn prompt_opt<S: AsRef<str>>(&mut self, msg: S) -> Option<String> {
-        let val = self.prompt_once(msg);
+    pub fn prompt_opt<S: AsRef<str>>(&mut self, msg: S) -> Result<Option<String>> {
+        let val = self.prompt_once(msg)?;
         if val.is_empty() {
-            return None;
+            return Ok(None);
         }
-        Some(val)
+        Ok(Some(val))
     }
 
     /// Prompts until a non-empty value is provided
-    pub fn prompt_nonempty<S: AsRef<str>>(&mut self, msg: S) -> String {
+    pub fn prompt_nonempty<S: AsRef<str>>(&mut self, msg: S) -> Result<String> {
         let mut val;
-        val = self.prompt_opt(&msg);
+        val = self.prompt_opt(&msg)?;
         while val.is_none() {
             eprintln!("Value is required.");
-            val = self.prompt_opt(&msg);
+            val = self.prompt_opt(&msg)?;
         }
-        val.unwrap()
+        Ok(val.unwrap())
     }
 
     /// Prompts with custom handler to transform input
-    pub fn prompt_then<S, F, U>(&mut self, msg: S, handler: F) -> U
+    pub fn prompt_then<S, F, U>(&mut self, msg: S, handler: F) -> Result<U>
     where
         S: AsRef<str>,
         F: Fn(String) -> ::std::result::Result<U, String>,
     {
-        let mut val = handler(self.prompt_once(&msg));
+        let mut val = handler(self.prompt_once(&msg)?);
         while let Err(e) = val {
             eprintln!("{}", e);
-            val = handler(self.prompt_once(&msg));
+            val = handler(self.prompt_once(&msg)?);
         }
-        val.unwrap()
+        Ok(val.unwrap())
     }
 }
 
@@ -425,7 +420,7 @@ where
  * Prompt helpers
  */
 
-fn prompt_bool<S: AsRef<str>>(msg: S) -> bool {
+fn prompt_bool<S: AsRef<str>>(msg: S) -> Result<bool> {
     Prompter::new().prompt_then(msg, |s| match &*s.to_lowercase() {
         "true" | "yes" | "y" => Ok(true),
         "false" | "no" | "n" => Ok(false),
@@ -433,7 +428,7 @@ fn prompt_bool<S: AsRef<str>>(msg: S) -> bool {
     })
 }
 
-fn prompt_bool_opt<S: AsRef<str>>(msg: S) -> Option<bool> {
+fn prompt_bool_opt<S: AsRef<str>>(msg: S) -> Result<Option<bool>> {
     Prompter::new().prompt_then(msg, |s| match &*s.to_lowercase().trim() {
         "" => Ok(None),
         "true" | "yes" | "y" => Ok(Some(true)),
@@ -442,21 +437,21 @@ fn prompt_bool_opt<S: AsRef<str>>(msg: S) -> Option<bool> {
     })
 }
 
-fn prompt_path<S: AsRef<str>>(msg: S) -> PathBuf {
+fn prompt_path<S: AsRef<str>>(msg: S) -> Result<PathBuf> {
     let completer = FilenameCompleter::new();
-    let s = Prompter::with_completer(completer).prompt_nonempty(msg);
-    PathBuf::from(path_expand(s))
+    let s = Prompter::with_completer(completer).prompt_nonempty(msg)?;
+    Ok(PathBuf::from(path_expand(s)))
 }
 
-fn prompt_path_opt<S: AsRef<str>>(msg: S) -> Option<PathBuf> {
+fn prompt_path_opt<S: AsRef<str>>(msg: S) -> Result<Option<PathBuf>> {
     let completer = FilenameCompleter::new();
-    Prompter::with_completer(completer)
-        .prompt_opt(msg)
+    Ok(Prompter::with_completer(completer)
+        .prompt_opt(msg)?
         .map(path_expand)
-        .map(PathBuf::from)
+        .map(PathBuf::from))
 }
 
-fn prompt_parse<T, S>(msg: S) -> T
+fn prompt_parse<T, S>(msg: S) -> Result<T>
 where
     T: FromStr,
     <T as FromStr>::Err: ::std::error::Error,
@@ -465,7 +460,7 @@ where
     Prompter::new().prompt_then(msg, |s| T::from_str(s.as_ref()).map_err(|e| e.to_string()))
 }
 
-fn prompt_parse_opt<T, S>(msg: S) -> Option<T>
+fn prompt_parse_opt<T, S>(msg: S) -> Result<Option<T>>
 where
     T: FromStr,
     <T as FromStr>::Err: ::std::error::Error,
