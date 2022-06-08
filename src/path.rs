@@ -25,7 +25,9 @@ struct FilenameHelper {
 }
 
 impl Helper for FilenameHelper {}
-impl rustyline::hint::Hinter for FilenameHelper {}
+impl rustyline::hint::Hinter for FilenameHelper {
+    type Hint = String;
+}
 impl rustyline::validate::Validator for FilenameHelper {}
 impl rustyline::highlight::Highlighter for FilenameHelper {}
 impl Completer for FilenameHelper {
