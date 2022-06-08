@@ -1,7 +1,7 @@
 use promptly::{prompt, prompt_default, prompt_opt, Promptable};
 use std::error::Error;
-use std::path::PathBuf;
 use std::fmt::Debug;
+use std::path::PathBuf;
 
 fn test<P: Promptable + Debug>(ty: &str, default: P) -> Result<(), Box<dyn Error>> {
     let res = prompt::<P, _>(ty)?;
