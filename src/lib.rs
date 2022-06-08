@@ -188,8 +188,7 @@ where
 
     /// Prompts until a non-empty value is provided
     pub fn prompt_nonempty<S: AsRef<str>>(&mut self, msg: S) -> Result<String> {
-        let mut val;
-        val = self.prompt_opt(&msg)?;
+        let mut val = self.prompt_opt(&msg)?;
         while val.is_none() {
             eprintln!("Value is required.");
             val = self.prompt_opt(&msg)?;
